@@ -2,6 +2,11 @@ module Arith where
 
 {- Implementation of 3-2: Arithmetic expressions (p. 41). -}
 
+-- This definition allows monadic small-step evaluation without headaches.
+(<#>) :: Applicative f => f (a -> b) -> a -> f b
+(<#>) func x = func <*> pure x
+infixl 4 <#>
+
 data Term
     = TrueTerm
     | FalseTerm
@@ -13,28 +18,19 @@ data Term
     deriving (Show)
 
 eval' :: Term -> Maybe Term
--- E-IfTrue
-eval' (IfTerm TrueTerm t _) = Just t
--- E-IfFalse
-eval' (IfTerm FalseTerm _ t) = Just t
--- E-If
-eval' (IfTerm t1 t2 t3) = Just (IfTerm (eval t1) t2 t3)
--- E-Succ
-eval' (SuccTerm t) = eval' t
--- E-PredZero
-eval' (PredTerm ZeroTerm) = Just ZeroTerm
--- E-PredSucc
-eval' (PredTerm (SuccTerm nv)) = Just nv
--- E-Pred
-eval' (PredTerm t) = eval' t
--- E-IsZeroZero
-eval' (IsZeroTerm ZeroTerm) = Just TrueTerm
--- E-IsZeroSucc
-eval' (IsZeroTerm (SuccTerm nv)) = Just FalseTerm
--- E-IsZero
-eval' (IsZeroTerm t) = Just (IsZeroTerm (eval t))
--- (Nothing matches.)
-eval' _ = Nothing
+eval' t =
+    case t of
+        IfTerm TrueTerm  t  _       -> return t
+        IfTerm FalseTerm _  t       -> return t
+        IfTerm t1        t2 t3      -> IfTerm <$> eval' t1 <#> t2 <#> t3
+        SuccTerm t                  -> eval' t
+        PredTerm ZeroTerm           -> return ZeroTerm
+        PredTerm (SuccTerm nv)      -> return nv
+        PredTerm t                  -> eval' t
+        IsZeroTerm ZeroTerm         -> return TrueTerm
+        IsZeroTerm (SuccTerm nv)    -> return FalseTerm
+        IsZeroTerm t                -> IsZeroTerm <$> eval' t
+        _                           -> Nothing
 
 eval :: Term -> Term
 eval t = case (eval' t) of
