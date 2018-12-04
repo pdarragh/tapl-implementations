@@ -22,25 +22,28 @@ data Term
     | IsZeroTerm Term
     deriving (Show, Eq)
 
+checkType :: Term -> Type -> Maybe ()
+checkType t compTy =
+    case (typeOf t) of
+        Just tTy
+            | tTy == compTy -> return ()
+        _                   -> Nothing
+
+compTypes :: Term -> Term -> Maybe Type
+compTypes t1 t2 =
+    let ty1 = typeOf t1
+        ty2 = typeOf t2
+    in case ((==) <$> ty1 <*> ty2) of
+        Just True   -> ty1
+        _           -> Nothing
+
 typeOf :: Term -> Maybe Type
 typeOf t =
     case t of
         TrueTerm        -> return BoolType
         FalseTerm       -> return BoolType
-        IfTerm t1 t2 t3 -> case (typeOf t1) of
-                            Just ty1    -> ty23
-                                            where
-                                                ty2 = typeOf t2
-                                                ty3 = typeOf t3
-                                                ty23 = if ty2 == ty3 then ty2 else Nothing
-                            Nothing     -> Nothing
+        IfTerm t1 t2 t3 -> checkType t1 BoolType *> compTypes t2 t3
         ZeroTerm        -> return NatType
-        SuccTerm t'     -> case (typeOf t') of
-                            Just NatType    -> return NatType
-                            _               -> Nothing
-        PredTerm t'     -> case (typeOf t') of
-                            Just NatType    -> return NatType
-                            _               -> Nothing
-        IsZeroTerm t'   -> case (typeOf t') of
-                            Just NatType    -> return BoolType
-                            _               -> Nothing
+        SuccTerm t'     -> checkType t' NatType *> return NatType
+        PredTerm t'     -> checkType t' NatType *> return NatType
+        IsZeroTerm t'   -> checkType t' NatType *> return BoolType
