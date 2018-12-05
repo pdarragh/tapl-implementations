@@ -20,19 +20,20 @@ data Term
 eval' :: Term -> Maybe Term
 eval' t =
     case t of
-        IfTerm TrueTerm  t  _       -> return t
-        IfTerm FalseTerm _  t       -> return t
-        IfTerm t1        t2 t3      -> IfTerm <$> eval' t1 <#> t2 <#> t3
-        SuccTerm t                  -> eval' t
+        IfTerm TrueTerm t2 _        -> return t2
+        IfTerm FalseTerm _ t3       -> return t3
+        IfTerm t1 t2 t3             -> IfTerm <$> eval' t1 <#> t2 <#> t3
+        SuccTerm t'                 -> SuccTerm <$> eval' t'
         PredTerm ZeroTerm           -> return ZeroTerm
         PredTerm (SuccTerm nv)      -> return nv
-        PredTerm t                  -> eval' t
+        PredTerm t'                 -> PredTerm <$> eval' t'
         IsZeroTerm ZeroTerm         -> return TrueTerm
         IsZeroTerm (SuccTerm nv)    -> return FalseTerm
-        IsZeroTerm t                -> IsZeroTerm <$> eval' t
+        IsZeroTerm t'               -> IsZeroTerm <$> eval' t'
         _                           -> Nothing
 
 eval :: Term -> Term
-eval t = case (eval' t) of
-            (Just t') -> eval t'
-            Nothing -> t
+eval t =
+    case (eval' t) of
+        Just t' -> eval t'
+        Nothing -> t
